@@ -1,0 +1,1063 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>TraDemon 매매일지</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Dela+Gothic+One&family=IBM+Plex+Sans+KR:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: an exchange order ticket on the left, the trade ledger on the right; a contract page stands in front of both on every visit. */
+:root{
+  color-scheme: dark;
+  --bg:#0a0910;
+  --panel:#13111b;
+  --panel-2:#1b1826;
+  --line:#272335;
+  --line-2:#38334c;
+  --fg:#eeebf6;
+  --muted:#8f89a5;
+  --dim:#5f5a74;
+  --long:#fff59d;
+  --long-ink:#1d1a00;
+  --short:#7e57c2;
+  --short-text:#b39ae6;
+  --short-ink:#ffffff;
+  --blood:#ff3d5e;
+  --blood-dark:#b0102c;
+  --gash-top:#3d0012;
+  --gash-bottom:#0b0004;
+  --font-display:"Black Han Sans","Dela Gothic One","IBM Plex Sans KR","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  --font-body:"IBM Plex Sans KR","Apple SD Gothic Neo","Malgun Gothic","Hiragino Sans","Yu Gothic","Meiryo","Noto Sans JP",system-ui,sans-serif;
+  --font-num:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --radius:10px;
+}
+*{box-sizing:border-box}
+html,body{background:var(--bg);color:var(--fg)}
+body{font-family:var(--font-body);font-size:14px;line-height:1.55;-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--panel)}
+button,input,select,textarea{font:inherit;color:inherit}
+a{color:var(--long)}
+:focus-visible{outline:2px solid var(--long);outline-offset:2px}
+.num{font-family:var(--font-num);font-variant-numeric:tabular-nums}
+.wrap{max-width:1200px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+
+/* top bar */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--panel);border-bottom:1px solid var(--line)}
+.top .wrap{display:flex;align-items:center;gap:16px;padding-block:10px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px;margin-right:auto}
+.brand svg{width:30px;height:30px;flex:none}
+.brand b{font-family:var(--font-display);font-weight:400;font-size:19px;letter-spacing:.02em}
+.brand span{color:var(--muted);font-size:12px}
+.status{display:flex;align-items:center;gap:14px}
+.status .seed{display:flex;flex-direction:column;align-items:flex-end;line-height:1.2}
+.status .seed small{color:var(--muted);font-size:11px}
+.status .seed strong{font-family:var(--font-num);font-size:15px;font-weight:600}
+.marks{display:inline-flex;gap:2px;font-family:var(--font-display);font-size:24px;line-height:1}
+.marks.big{font-size:clamp(72px,18vw,128px);gap:.08em}
+.six{position:relative;display:inline-block;color:var(--fg)}
+.six.cut{color:var(--dim)}
+.six .gash{position:absolute;left:-20%;top:-6%;width:140%;height:128%;overflow:visible;pointer-events:none}
+.gash-cut{fill:url(#gashFill);stroke:var(--blood);stroke-width:1.2;stroke-linejoin:miter;filter:drop-shadow(0 0 1.5px var(--blood))}
+.gash .drip{stroke:var(--blood-dark);stroke-linecap:round;fill:none}
+.gash .drip.d1{stroke-width:3}.gash .drip.d2{stroke-width:4}.gash .drip.d3{stroke-width:2.6}
+.gash .drop{fill:var(--blood-dark);transform-box:fill-box;transform-origin:center;animation:fall 3.2s ease-in infinite}
+.gash .drop.d2{animation-delay:1.1s}.gash .drop.d3{animation-delay:2.2s}
+@keyframes fall{0%{transform:translateY(0) scale(.6);opacity:0}20%{opacity:1;transform:translateY(0) scale(1)}100%{transform:translateY(26px) scale(.8);opacity:0}}
+.six.fresh .gash{animation:rip .45s cubic-bezier(.2,.9,.3,1) both}
+@keyframes rip{from{clip-path:inset(0 0 100% 0)}to{clip-path:inset(0 0 0 0)}}
+.six.fresh .gash .drip{transform-box:fill-box;transform-origin:50% 0;animation:drip 1.3s ease-in .45s both}
+@keyframes drip{from{transform:scaleY(0)}to{transform:scaleY(1)}}
+.six.fresh .gash .drop{animation-delay:1.8s}
+.icon-btn{background:var(--panel-2);border:1px solid var(--line-2);border-radius:8px;height:34px;padding:0 12px;cursor:pointer;color:var(--fg)}
+.icon-btn:hover{border-color:var(--muted)}
+@media (max-width:520px){.brand span{display:none}.status .seed small{display:none}.top .wrap{gap:10px}.marks{font-size:20px}}
+
+/* shared bits */
+.eyebrow{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.field{display:flex;flex-direction:column;gap:6px;min-width:0}
+.field label,.field .lbl{font-size:12px;color:var(--muted)}
+.input{background:var(--panel-2);border:1px solid var(--line-2);border-radius:8px;height:42px;padding:0 12px;width:100%;min-width:0}
+textarea.input{height:auto;min-height:76px;padding:10px 12px;resize:vertical;line-height:1.5}
+.input:focus{border-color:var(--long);outline:none}
+.input.num{font-size:15px}
+.suffix{position:relative}
+.suffix .input{padding-right:52px}
+.suffix em{position:absolute;right:12px;top:50%;transform:translateY(-50%);font-style:normal;color:var(--muted);font-size:12px;pointer-events:none}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.btn{height:44px;border-radius:8px;border:0;padding:0 16px;font-weight:700;cursor:pointer;transition:filter .15s,opacity .15s}
+.btn:disabled{opacity:.28;cursor:not-allowed}
+.btn:not(:disabled):hover{filter:brightness(1.08)}
+.btn.long{background:var(--long);color:var(--long-ink)}
+.btn.short{background:var(--short);color:var(--short-ink)}
+.btn.ghost{background:transparent;border:1px solid var(--line-2);color:var(--fg)}
+.btn.danger{background:var(--blood);color:var(--short-ink)}
+.btn.small{height:34px;font-size:13px;padding:0 12px}
+.chip{display:inline-flex;align-items:center;height:20px;padding:0 7px;border-radius:5px;font-size:11px;font-weight:700;letter-spacing:.03em}
+.chip.long{background:var(--long);color:var(--long-ink)}
+.chip.short{background:var(--short);color:var(--short-ink)}
+.chip.cut{background:transparent;border:1px solid var(--blood);color:var(--blood)}
+.chip.demo{background:transparent;border:1px solid var(--muted);color:var(--muted)}
+.up{color:var(--long)}
+.down{color:var(--short-text)}
+.muted{color:var(--muted)}
+.note{font-size:12px;color:var(--muted)}
+.warn{color:var(--blood)}
+.banner{border:1px solid var(--line-2);background:var(--panel);border-radius:var(--radius);padding:10px 14px;font-size:13px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.banner.alert{border-color:var(--blood)}
+.linkbtn{background:none;border:0;padding:0;color:var(--long);cursor:pointer;text-decoration:underline;text-underline-offset:3px;font-size:inherit}
+
+/* gate */
+#gate .wrap{padding-block:40px 64px;display:grid;place-items:center}
+.contract{width:100%;max-width:620px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:28px clamp(18px,5vw,40px);display:flex;flex-direction:column;gap:20px}
+.contract h1{font-family:var(--font-display);font-weight:400;font-size:clamp(34px,7vw,48px);line-height:1.1;margin:0;text-wrap:balance}
+.clause{font-size:16px;line-height:1.75;margin:0}
+.clause b{color:var(--long);font-family:var(--font-num)}
+.whisper{border-left:2px solid var(--short);padding-left:12px;color:var(--short-text);font-size:14px;margin:0}
+.marks-wrap{display:flex;justify-content:center;padding-block:4px}
+.terms{display:grid;gap:14px;border-top:1px solid var(--line);padding-top:18px}
+.slider-row{display:flex;align-items:center;gap:12px}
+.slider-row input[type=range]{flex:1;accent-color:var(--long)}
+.slider-row output{font-family:var(--font-num);font-size:18px;font-weight:600;min-width:52px;text-align:right;color:var(--long)}
+.ticks{display:flex;justify-content:space-between;font-family:var(--font-num);font-size:11px;color:var(--dim);padding-inline:2px}
+.locked{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:13px;color:var(--muted)}
+.locked strong{color:var(--fg);font-family:var(--font-num)}
+.sign{display:flex;align-items:center;gap:10px;font-size:15px;cursor:pointer}
+.sign input{width:20px;height:20px;accent-color:var(--long)}
+.gate-actions{display:flex;flex-direction:column;gap:12px}
+
+/* journal */
+#journal .wrap{padding-block:20px 64px;display:flex;flex-direction:column;gap:16px}
+.grid{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;align-items:start}
+@media (min-width:920px){.grid{grid-template-columns:360px minmax(0,1fr)}.ticket{position:sticky;top:calc(env(safe-area-inset-top,0px) + 72px)}}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius)}
+.ticket{padding:18px;display:flex;flex-direction:column;gap:14px}
+.ticket h2,.section-head h2{font-size:15px;margin:0;font-weight:700}
+.calc{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px 12px;display:grid;gap:6px}
+.calc div{display:flex;justify-content:space-between;gap:12px;font-size:12.5px}
+.calc dt{color:var(--muted)}
+.calc dd{margin:0;font-family:var(--font-num);text-align:right}
+.calc .alert{color:var(--blood);font-size:12.5px;line-height:1.5;display:block}
+.dir-hint{font-size:12px;color:var(--muted);text-align:center;min-height:18px}
+.trade-btns{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+
+.ledger{display:flex;flex-direction:column;gap:16px;min-width:0}
+.stats{padding:16px 18px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 18px}
+@media (min-width:640px){.stats{grid-template-columns:repeat(5,minmax(0,1fr)) minmax(140px,1.4fr)}}
+.stat{display:flex;flex-direction:column;gap:2px;min-width:0}
+.stat small{color:var(--muted);font-size:11.5px}
+.stat strong{font-family:var(--font-num);font-size:17px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.spark{grid-column:1/-1;min-width:0}
+@media (min-width:640px){.spark{grid-column:auto}}
+.spark svg{width:100%;height:48px;display:block}
+.section{padding:16px 18px;display:flex;flex-direction:column;gap:12px}
+.section-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.section-head select{background:var(--panel-2);border:1px solid var(--line-2);border-radius:8px;height:32px;padding:0 10px}
+.empty{color:var(--muted);font-size:13px;padding:14px;border:1px dashed var(--line-2);border-radius:8px;text-align:center}
+
+.pos{border:1px solid var(--line-2);border-radius:8px;padding:12px;display:flex;flex-direction:column;gap:10px;background:var(--panel-2)}
+.pos-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.pos-head strong{font-size:15px}
+.pos-head time{margin-left:auto;color:var(--muted);font-size:12px;font-family:var(--font-num)}
+.kv{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px 14px}
+@media (min-width:560px){.kv{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.kv div{display:flex;flex-direction:column;min-width:0}
+.kv small{color:var(--muted);font-size:11px}
+.kv span{font-family:var(--font-num);font-size:13px;overflow-wrap:anywhere}
+.close-row{display:flex;gap:8px;flex-wrap:wrap}
+.close-row .input{flex:1 1 160px;height:38px}
+.confirm{border:1px solid var(--line-2);border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:8px;background:var(--bg)}
+.confirm.bad{border-color:var(--blood)}
+.confirm .btns{display:flex;gap:8px;flex-wrap:wrap}
+
+.hist{display:flex;flex-direction:column;gap:8px}
+.hist details{border:1px solid var(--line);border-radius:8px;background:var(--panel-2)}
+.hist details[open]{border-color:var(--line-2)}
+.hist details.cutrow{border-left:3px solid var(--blood)}
+.hist summary{list-style:none;cursor:pointer;padding:10px 12px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;align-items:center}
+.hist summary::-webkit-details-marker{display:none}
+.h-main{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0}
+.h-main strong{font-size:14px}
+.h-main time{color:var(--muted);font-size:12px;font-family:var(--font-num)}
+.h-prices{grid-column:1/2;font-family:var(--font-num);font-size:12px;color:var(--muted);overflow-wrap:anywhere}
+.h-pnl{grid-row:1/3;grid-column:2;text-align:right;font-family:var(--font-num);display:flex;flex-direction:column;align-items:flex-end}
+.h-pnl strong{font-size:15px}
+.h-pnl small{font-size:12px}
+.h-body{padding:0 12px 12px;display:flex;flex-direction:column;gap:12px;border-top:1px solid var(--line);padding-top:12px}
+.snaps{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:10px}
+.snap{display:flex;flex-direction:column;gap:6px;min-width:0}
+.snap img{width:100%;border-radius:6px;border:1px solid var(--line);display:block;background:var(--bg)}
+.snap a{font-size:12px;overflow-wrap:anywhere}
+
+/* sheet + overlay */
+.scrim{position:fixed;inset:0;background:rgba(5,4,9,.72);z-index:40;display:flex;justify-content:flex-end}
+.sheet{width:min(440px,100%);height:100%;overflow-y:auto;background:var(--panel);border-left:1px solid var(--line);padding:calc(env(safe-area-inset-top,0px) + 18px) max(18px,env(safe-area-inset-right,0px)) calc(env(safe-area-inset-bottom,0px) + 24px) 18px;display:flex;flex-direction:column;gap:18px}
+.sheet h3{margin:0;font-size:13px;color:var(--muted);font-weight:500;letter-spacing:.08em;text-transform:uppercase}
+.sheet-head{display:flex;justify-content:space-between;align-items:center}
+.sheet-head h2{margin:0;font-size:17px}
+.sheet section{display:flex;flex-direction:column;gap:10px;border-top:1px solid var(--line);padding-top:16px}
+.btn-row{display:flex;gap:8px;flex-wrap:wrap}
+.guide{margin:0;padding-left:18px;display:grid;gap:4px;font-size:13px;color:var(--fg)}
+.overlay{position:fixed;inset:0;z-index:50;background:rgba(5,4,9,.86);display:grid;place-items:center;padding:24px max(16px,env(safe-area-inset-right,0px)) 24px max(16px,env(safe-area-inset-left,0px))}
+.verdict{width:100%;max-width:440px;background:var(--panel);border:1px solid var(--blood);border-radius:14px;padding:28px 24px;display:flex;flex-direction:column;gap:14px;text-align:center;align-items:center}
+.verdict h2{font-family:var(--font-display);font-weight:400;font-size:40px;margin:0;color:var(--blood)}
+.verdict p{margin:0}
+.verdict .summary{width:100%;display:grid;grid-template-columns:1fr 1fr;gap:8px;text-align:left;background:var(--bg);border-radius:8px;padding:12px}
+.verdict .summary small{color:var(--muted);font-size:11px;display:block}
+.verdict .summary span{font-family:var(--font-num)}
+.toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 20px);transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:8px;font-size:13px;font-weight:500;z-index:60;max-width:calc(100% - 32px)}
+.gear{width:36px;height:36px;padding:0;display:grid;place-items:center}
+.gear svg{width:18px;height:18px}
+.lang-seg{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.lang-seg button{height:38px;border-radius:8px;border:1px solid var(--line-2);background:var(--panel-2);cursor:pointer;font-weight:500}
+.lang-seg button[aria-pressed="true"]{background:var(--long);color:var(--long-ink);border-color:var(--long)}
+@media (prefers-reduced-motion:reduce){.gash,.gash *{animation:none!important}*{transition:none!important}}
+</style>
+
+
+<style>[hidden]{display:none!important}body{margin:0}img{max-width:100%}</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs><linearGradient id="gashFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(--gash-top)"/><stop offset="1" style="stop-color:var(--gash-bottom)"/></linearGradient></defs></svg>
+<header class="top">
+  <div class="wrap">
+    <div class="brand">
+      <svg viewBox="0 0 64 64" aria-hidden="true">
+        <circle cx="32" cy="32" r="29" fill="var(--panel-2)" stroke="var(--long)" stroke-width="2.5"/>
+        <path d="M17 11 C 10 20, 13 31, 25 30 C 19 26, 17 19, 17 11 Z" fill="var(--long)"/>
+        <path d="M47 11 C 54 20, 51 31, 39 30 C 45 26, 47 19, 47 11 Z" fill="var(--short)"/>
+        <path d="M15 36 Q 32 55 49 36 Q 32 44 15 36 Z" fill="var(--fg)"/>
+        <path d="M17 37.5 L21 43 L25 40 L29 46 L32 41.5 L35 46 L39 40 L43 43 L47 37.5" fill="none" stroke="var(--panel-2)" stroke-width="2.2" stroke-linejoin="round"/>
+      </svg>
+      <div><b>TraDemon</b> <span data-i18n="brandSub">매매일지</span></div>
+    </div>
+    <div class="status" id="top-status"></div>
+    <button class="icon-btn gear" id="open-settings" type="button" data-i18n-aria="settingsBtn" aria-label="설정"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
+  </div>
+</header>
+
+<main>
+  <section id="gate" aria-labelledby="gate-title">
+    <div class="wrap"><div class="contract" id="contract"></div></div>
+  </section>
+
+  <section id="journal" hidden>
+    <div class="wrap">
+      <div id="journal-banners" style="display:flex;flex-direction:column;gap:10px"></div>
+      <div class="grid">
+        <form class="panel ticket" id="ticket" novalidate>
+          <h2 data-i18n="newTrade">새 매매</h2>
+          <div class="row2">
+            <div class="field"><label for="t-date" data-i18n="date">매매 일자</label><input class="input num" id="t-date" type="datetime-local"></div>
+            <div class="field"><label for="t-symbol" data-i18n="symbol">코인 종목</label><input class="input" id="t-symbol" list="symbols" value="BTCUSDT" autocomplete="off"></div>
+          </div>
+          <datalist id="symbols"><option value="BTCUSDT"><option value="ETHUSDT"><option value="SOLUSDT"><option value="XRPUSDT"><option value="DOGEUSDT"></datalist>
+          <div class="row2">
+            <div class="field"><label for="t-entry" data-i18n="entry">진입가</label><input class="input num" id="t-entry" type="number" inputmode="decimal" step="any" min="0" placeholder="0.00"></div>
+            <div class="field"><label for="t-stop" data-i18n="stop">손절가</label><input class="input num" id="t-stop" type="number" inputmode="decimal" step="any" min="0" placeholder="0.00"></div>
+          </div>
+          <div class="field"><label for="t-lev" data-i18n="lev">레버리지 (선택)</label><div class="suffix"><input class="input num" id="t-lev" type="number" inputmode="numeric" step="1" min="1" max="200" data-i18n-ph="levPh"><em>x</em></div></div>
+          <dl class="calc" id="t-calc"></dl>
+          <div class="field"><label for="t-snap" data-i18n="snap">진입 스냅샷 링크</label><input class="input" id="t-snap" type="url" inputmode="url" placeholder="https://www.tradingview.com/x/…"><button type="button" class="linkbtn note" data-action="guide" style="align-self:flex-start" data-i18n="snapHow">스냅샷 링크 받는 법</button></div>
+          <div class="field"><label for="t-note" data-i18n="note">비고</label><textarea class="input" id="t-note" data-i18n-ph="notePh"></textarea></div>
+          <div class="dir-hint" id="t-hint"></div>
+          <div class="trade-btns">
+            <button class="btn long" type="button" id="rec-long" disabled data-i18n="recLong">Long 기록</button>
+            <button class="btn short" type="button" id="rec-short" disabled data-i18n="recShort">Short 기록</button>
+          </div>
+        </form>
+
+        <div class="ledger">
+          <div class="panel stats" id="stats"></div>
+          <div class="panel section">
+            <div class="section-head"><h2 id="open-title"></h2></div>
+            <div id="open-list" style="display:flex;flex-direction:column;gap:10px"></div>
+          </div>
+          <div class="panel section">
+            <div class="section-head"><h2 data-i18n="histTitle">매매 기록</h2></div>
+            <div class="hist" id="hist-list"></div>
+            <p class="note" style="margin:0" data-i18n="histNote"></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div class="scrim" id="settings" hidden>
+  <aside class="sheet" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+    <div class="sheet-head"><h2 id="settings-title" data-i18n="setTitle">설정 · 백업</h2><button class="icon-btn" type="button" data-action="close-settings" data-i18n="close">닫기</button></div>
+    <section style="border-top:0;padding-top:0">
+      <h3 data-i18n="setLang">언어</h3>
+      <div class="lang-seg" role="group" data-i18n-aria="setLang">
+        <button type="button" data-lang="ko">한국어</button>
+        <button type="button" data-lang="en">English</button>
+        <button type="button" data-lang="ja">日本語</button>
+      </div>
+    </section>
+    <section>
+      <h3 data-i18n="setTrade">매매 설정</h3>
+      <div class="row2">
+        <div class="field"><label for="s-risk" data-i18n="setRisk">1회 리스크</label><div class="suffix"><input class="input num" id="s-risk" type="number" step="0.1" min="0.1" max="5"><em>%</em></div></div>
+        <div class="field"><label for="s-fee" data-i18n="setFee">수수료 (한쪽)</label><div class="suffix"><input class="input num" id="s-fee" type="number" step="0.01" min="0" max="1"><em>%</em></div></div>
+      </div>
+      <p class="note" style="margin:0" data-i18n="setNote"></p>
+    </section>
+    <section>
+      <h3 data-i18n="snapHow">스냅샷 링크 받는 법</h3>
+      <ol class="guide">
+        <li data-i18n="g1"></li>
+        <li data-i18n="g2"></li>
+        <li data-i18n="g3"></li>
+      </ol>
+      <p class="note" style="margin:0" data-i18n="gNote"></p>
+    </section>
+    <section>
+      <h3 data-i18n="setBackup">백업</h3>
+      <p class="note" style="margin:0" data-i18n="bNote"></p>
+      <div class="btn-row">
+        <button class="btn ghost small" type="button" data-action="export-file" data-i18n="bFile">파일로 저장</button>
+        <button class="btn ghost small" type="button" data-action="export-copy" data-i18n="bCopy">백업 내용 복사</button>
+      </div>
+      <div class="field"><label for="s-import-file" data-i18n="bImportFile">백업 파일 불러오기</label><input id="s-import-file" type="file" accept="application/json,.json" class="note"></div>
+      <div class="field"><label for="s-import-text" data-i18n="bImportText">또는 백업 내용 붙여넣기</label><textarea class="input num" id="s-import-text" placeholder='{"v":1, …}' style="min-height:64px;font-size:12px"></textarea></div>
+      <div id="import-confirm"></div>
+      <button class="btn ghost small" type="button" data-action="import-text" style="align-self:flex-start" data-i18n="bImportBtn">붙여넣은 내용 불러오기</button>
+    </section>
+    <section>
+      <h3 data-i18n="setReset">초기화</h3>
+      <div id="reset-zone"></div>
+    </section>
+  </aside>
+</div>
+
+<div class="overlay" id="overlay" hidden><div class="verdict" id="verdict" role="alertdialog" aria-modal="true"></div></div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+(function(){
+  'use strict';
+  var KEY = 'trademon-journal-v1';
+  var LANG_KEY = 'trademon-lang';
+  var MMR = 0.005; // 유지증거금률 근사치
+  var canPersist = true;
+  var demo = null;
+  var gateSigned = false;
+  var pendingClose = {};
+  var pendingCancel = {};
+  var freshCut = null;
+  var queue = [];
+
+  // ---------- i18n ----------
+  var I18N = {
+    ko: {
+      brandSub:'매매일지', settingsBtn:'설정', seedNow:'현재 시드', livesAria:'잃은 목숨 {n}/3',
+      eyebrow:'제 {n} 계약 · 월억이와의 계약서', brokenCount:' · 파기 {n}회', h1:'원칙은 하나.',
+      clause:'한 번의 매매에서 {th} 이상의 손실은 가져가지 않는다.',
+      whisper1:'너의 이번 트레이딩 인생에 3개의 목숨이 주어질거야..', whisper2:'3번 뿐인 기회야.. 이번 도전에 모든 목숨을 잃는다면 미련없이 떠난다는 각오로 임하길 바래..',
+      seedLabel:'시작 시드', seedNote:'현재 시드 {v} · 입출금이 있었으면 여기서 고치세요.',
+      ruleLabel:'손절 원칙', ruleNote:'바꾸면 새로 진입하는 매매부터 적용돼요. 진행 중인 포지션은 진입할 때의 원칙을 따라요.',
+      riskLabel:'1회 리스크', riskNote:'진입가와 손절가를 입력하면 포지션 수량이 리스크에 맞춰 계산됩니다.',
+      sign:'원칙을 확인했고, 지키겠습니다', enterResume:'일지 열기', enterNew:'서명하고 일지 열기',
+      storeNote:'기록은 이 브라우저에만 저장돼요. 설정의 백업에서 파일로 보관하세요.', demoLink:'예시로 둘러보기',
+      noStore:'이 브라우저에서는 저장이 막혀 있어요. 페이지를 닫으면 기록이 사라지니 백업을 꼭 하세요.', tSeedReq:'시작 시드를 입력하세요',
+      demoChip:'예시', demoBanner:'예시 데이터를 보는 중이에요. 여기서 한 기록은 저장되지 않아요.', demoExit:'내 일지로 돌아가기',
+      newTrade:'새 매매', date:'매매 일자', symbol:'코인 종목', entry:'진입가', stop:'손절가', lev:'레버리지 (선택)', levPh:'청산 위험 확인용',
+      snap:'진입 스냅샷 링크', snapHow:'스냅샷 링크 받는 법', note:'비고', notePh:'진입 근거, 그때의 감정 같은 것',
+      hintDefault:'손절가가 진입가보다 아래면 롱, 위면 숏이에요', hintLong:'손절가가 진입가 아래라 롱이에요', hintShort:'손절가가 진입가 위라 숏이에요',
+      recLong:'Long 기록', recShort:'Short 기록',
+      cRisk:'리스크', cDist:'손절 거리', cQty:'수량', cNotional:'포지션 규모', cMaxLev:'이 손절에서 안전한 레버리지', cMaxLevV:'약 {n}x 이하',
+      cFee:'수수료 (한쪽)', cFeeV:'{r}% · 손절 시 약 {v}', cFeeEdit:'변경', cMargin:'필요 증거금', cLiq:'예상 청산가 (대략)', aLiqFirst:'손절가보다 청산가가 먼저 와요. 레버리지를 {n}x 이하로 낮추세요.',
+      aMargin:'필요 증거금이 현재 시드보다 커요.', cQtyEmpty:'진입가와 손절가를 입력하세요', aSeedZero:'시드가 0 이하라 새 매매를 계산할 수 없어요.',
+      tLong:'롱 진입을 기록했어요', tShort:'숏 진입을 기록했어요',
+      sSeed:'현재 시드', sRet:'계약 수익률', sTrades:'매매 수', sTradesV:'{n}건', sWin:'승률', sAvgR:'평균 R', sparkAria:'시드 흐름', sparkEmpty:'청산 기록이 쌓이면 시드 흐름이 그려져요',
+      openTitle:'진행 중 ({n})', openEmpty:'진행 중인 포지션이 없어요. 진입가와 손절가를 넣고 기록하세요.',
+      exitAt:'청산가', warnViolation:'손절 원칙 {th}%를 넘는 손실이에요. 기록하면 목숨이 하나 사라져요.', feeNote:'수수료 {v} 포함. 기록한 뒤에는 고칠 수 없어요.',
+      recordIt:'이대로 기록', reenter:'다시 입력', delAsk:'이 진입 기록을 지울까요? 실제로 진입하지 않았을 때만 지우세요.', del:'지우기', no:'아니요',
+      exitPh:'청산 가격', closeBtn:'청산 기록', cancelEntry:'진입 취소', tExitReq:'청산 가격을 입력하세요', tDel:'진입 기록을 지웠어요', tClosed:'청산을 기록했어요',
+      histTitle:'매매 기록', histEmpty:'아직 청산한 매매가 없어요. 진행 중인 포지션에 청산 가격을 넣으면 여기로 옮겨와요.', chipViolation:'위반', stopWord:'손절',
+      kSeedAtEntry:'진입 시 시드', kFee:'수수료', snapEntry:'진입', snapExit:'청산', snapNone:'{l} 스냅샷 없음', snapLabel:'{l} 스냅샷', snapAlt:'{l} 차트 스냅샷',
+      exitSnap:'청산 스냅샷 링크', review:'복기', reviewPh:'원칙대로 했나? 다음엔 뭘 다르게 할까?',
+      histNote:'청산 기록은 고칠 수 없어요. 위반도 마찬가지예요. 복기와 청산 스냅샷만 나중에 채울 수 있어요.',
+      vLifeTitle:'목숨 −1', vLifeLine:'{p} · 손절 원칙 {th}% 초과 · 남은 목숨 {n}개', vWhisper:'약속했잖아, 청산이.', vBtn:'다시는 안 그런다',
+      vBrokenTitle:'계약 파기', vBrokenText:'목숨 3개를 다 잃었어. 약속대로라면 이 시장을 떠나야 해.',
+      sumDays:'기간', sumDaysV:'{n}일', sumStart:'시작 시드', sumEnd:'마지막 시드',
+      vBrokenNote:'기록은 그대로 남아요. 다시 계약하면 목숨 3개로 새로 시작해요.', vCarry:' 진행 중인 포지션 {n}건은 새 계약으로 넘어가요.', vRenew:'그래도 다시 계약하기',
+      setTitle:'설정 · 백업', close:'닫기', setLang:'언어', setTrade:'매매 설정', setRisk:'1회 리스크', setFee:'수수료 (한쪽)',
+      setNote:'리스크는 손절에 닿았을 때 잃는 금액이 현재 시드의 몇 %인지예요. 수수료는 진입과 청산에 각각 붙어서 손익과 위반 판정에 들어가요. 기본 0.05%는 OKX 시장가 기준이라 지정가로 체결되면 거래소 손익과 몇 센트 차이 날 수 있어요. 손절 원칙과 시작 시드는 계약서 화면에서 바꿀 수 있어요.',
+      g1:'트레이딩뷰 차트 오른쪽 위 카메라 아이콘을 눌러요', g2:'"링크 복사"를 눌러요', g3:'일지의 스냅샷 칸에 붙여넣어요',
+      gNote:'이미지 파일을 저장하지 않고 링크만 저장해서 기록이 가벼워요. 링크가 살아 있는 동안 미리보기가 떠요.',
+      setBackup:'백업', bNote:'기록은 이 브라우저에만 저장돼요. 캐시를 지우거나 기기를 바꾸면 사라지니 자주 백업하세요.',
+      bFile:'파일로 저장', bCopy:'백업 내용 복사', bImportFile:'백업 파일 불러오기', bImportText:'또는 백업 내용 붙여넣기', bImportBtn:'붙여넣은 내용 불러오기',
+      setReset:'초기화', resetBtn:'모든 기록 지우기', resetConfirm:'계약, 매매, 목숨 기록이 전부 사라지고 되돌릴 수 없어요.', resetYes:'전부 지우기', cancel:'취소',
+      importConfirm:'계약 {c}개, 매매 {t}건을 불러와요. 지금 기록은 덮어써져요.', importYes:'불러오기',
+      importBad:'백업 형식이 아니에요. "백업 내용 복사"로 만든 내용이나 저장한 .json 파일을 넣어주세요.',
+      tCopied:'백업 내용을 복사했어요. 메모장 같은 곳에 붙여 보관하세요', tFileStart:'파일 저장을 시작했어요. 안 받아지면 "백업 내용 복사"를 쓰세요',
+      tFileBlocked:'파일 저장이 막혀 있어요. "백업 내용 복사"를 쓰세요', tImported:'백업을 불러왔어요', tReset:'모든 기록을 지웠어요',
+      tCopyBlocked:'복사가 막혀 있어요. 아래 칸에 띄운 내용을 직접 복사하세요', coin:'코인',
+      demoNotes:['4h 지지 리테스트 후 1h 양봉 확인','저항 거절 숏. 손절대로 나감','손절 걸었다가 지움. 반등할 줄 알았음','눌림 진입, 2R 익절','손절 지운 순간 끝났던 거. 다음엔 손절 주문을 먼저 걸고 진입.','1h 정배열 유지, 15m 눌림']
+    },
+    en: {
+      brandSub:'Trading Journal', settingsBtn:'Settings', seedNow:'Current seed', livesAria:'Lives lost {n}/3',
+      eyebrow:'Contract No. {n} · A pact with Getsuoku', brokenCount:' · Broken {n}×', h1:'One rule.',
+      clause:'Never take a loss of {th} or more on a single trade.',
+      whisper1:'You get three lives for this run of your trading life..', whisper2:'Only three chances.. Face this run ready to walk away with no regrets if you lose every life..',
+      seedLabel:'Starting seed', seedNote:'Current seed {v} · Adjust it here after deposits or withdrawals.',
+      ruleLabel:'Stop-loss rule', ruleNote:'Changes apply to new entries only. Open positions keep the rule they were entered with.',
+      riskLabel:'Risk per trade', riskNote:'Enter an entry and a stop, and the position size is calculated from this risk.',
+      sign:"I've read the rule and I'll keep it", enterResume:'Open journal', enterNew:'Sign and open journal',
+      storeNote:'Records are saved only in this browser. Keep a copy with Backup in Settings.', demoLink:'Try the example',
+      noStore:"Saving is blocked in this browser. Records disappear when you close the page, so back up.", tSeedReq:'Enter a starting seed',
+      demoChip:'Example', demoBanner:"You're viewing example data. Nothing you record here is saved.", demoExit:'Back to my journal',
+      newTrade:'New trade', date:'Date', symbol:'Symbol', entry:'Entry', stop:'Stop', lev:'Leverage (optional)', levPh:'Checks liquidation risk',
+      snap:'Entry snapshot link', snapHow:'How to get a snapshot link', note:'Notes', notePh:'Why you entered, how you felt',
+      hintDefault:'Stop below entry means long, above means short', hintLong:'Stop is below entry, so this is a long', hintShort:'Stop is above entry, so this is a short',
+      recLong:'Record Long', recShort:'Record Short',
+      cRisk:'Risk', cDist:'Stop distance', cQty:'Size', cNotional:'Position value', cMaxLev:'Safe leverage for this stop', cMaxLevV:'about {n}x or less',
+      cFee:'Fee (per side)', cFeeV:'{r}% · about {v} at stop', cFeeEdit:'Change', cMargin:'Margin needed', cLiq:'Est. liquidation (approx.)', aLiqFirst:"You'd be liquidated before your stop. Lower leverage to {n}x or less.",
+      aMargin:'Margin needed is larger than your current seed.', cQtyEmpty:'Enter entry and stop', aSeedZero:"Your seed is at or below zero, so new trades can't be sized.",
+      tLong:'Long entry recorded', tShort:'Short entry recorded',
+      sSeed:'Current seed', sRet:'Contract return', sTrades:'Trades', sTradesV:'{n}', sWin:'Win rate', sAvgR:'Avg R', sparkAria:'Seed curve', sparkEmpty:'Your seed curve appears as you close trades',
+      openTitle:'Open ({n})', openEmpty:'No open positions. Enter an entry and a stop to record one.',
+      exitAt:'Exit', warnViolation:'This loss breaks your {th}% rule. Recording it costs one life.', feeNote:"Includes {v} in fees. You can't edit it after recording.",
+      recordIt:'Record it', reenter:'Re-enter', delAsk:'Delete this entry? Only do this if you never actually entered.', del:'Delete', no:'No',
+      exitPh:'Exit price', closeBtn:'Record exit', cancelEntry:'Cancel entry', tExitReq:'Enter an exit price', tDel:'Entry deleted', tClosed:'Exit recorded',
+      histTitle:'Trade history', histEmpty:'No closed trades yet. Record an exit on an open position and it moves here.', chipViolation:'Broken', stopWord:'stop',
+      kSeedAtEntry:'Seed at entry', kFee:'Fees', snapEntry:'Entry', snapExit:'Exit', snapNone:'No {l} snapshot', snapLabel:'{l} snapshot', snapAlt:'{l} chart snapshot',
+      exitSnap:'Exit snapshot link', review:'Review', reviewPh:'Did you follow the rule? What will you do differently?',
+      histNote:"Closed trades can't be edited, and neither can broken rules. You can add a review and an exit snapshot later.",
+      vLifeTitle:'−1 life', vLifeLine:'{p} · over your {th}% rule · lives left: {n}', vWhisper:'You promised me.', vBtn:'Never again',
+      vBrokenTitle:'Contract broken', vBrokenText:'All three lives are gone. By our deal, you should leave this market.',
+      sumDays:'Duration', sumDaysV:'{n} days', sumStart:'Starting seed', sumEnd:'Final seed',
+      vBrokenNote:'Your records stay. A new contract starts with three lives.', vCarry:' {n} open position(s) move to the new contract.', vRenew:'Sign again anyway',
+      setTitle:'Settings · Backup', close:'Close', setLang:'Language', setTrade:'Trading', setRisk:'Risk per trade', setFee:'Fee (per side)',
+      setNote:'Risk is the share of your current seed you lose if the stop is hit. Fees apply on both entry and exit and count toward PnL and rule breaks. The default 0.05% is the OKX market (taker) rate, so limit fills can differ from exchange PnL by a few cents. Change the stop-loss rule and starting seed on the contract screen.',
+      g1:'On TradingView, tap the camera icon at the top right of the chart', g2:'Choose "Copy link"', g3:'Paste it into a snapshot field in the journal',
+      gNote:'Only the link is saved, not the image, so records stay light. The preview shows as long as the link works.',
+      setBackup:'Backup', bNote:'Records live only in this browser. Clearing the cache or switching devices erases them, so back up often.',
+      bFile:'Save as file', bCopy:'Copy backup', bImportFile:'Load a backup file', bImportText:'Or paste a backup', bImportBtn:'Load pasted backup',
+      setReset:'Reset', resetBtn:'Delete all records', resetConfirm:"Contracts, trades and lives will all be deleted. This can't be undone.", resetYes:'Delete everything', cancel:'Cancel',
+      importConfirm:'Load {c} contract(s) and {t} trade(s). Your current records will be replaced.', importYes:'Load',
+      importBad:"That isn't a backup. Use text from \"Copy backup\" or a saved .json file.",
+      tCopied:'Backup copied. Paste it somewhere safe, like a notes app', tFileStart:'Saving the file. If nothing downloads, use "Copy backup"',
+      tFileBlocked:'File saving is blocked. Use "Copy backup"', tImported:'Backup loaded', tReset:'All records deleted',
+      tCopyBlocked:'Copying is blocked. Copy the text shown in the box below', coin:'coin',
+      demoNotes:['Retested 4h support, waited for a 1h green candle','Short on a resistance rejection. Exited at the stop','Set a stop, then removed it. Thought it would bounce','Entered the pullback, took profit at 2R','It was over the moment I removed the stop. Next time, place the stop order first.','1h trend intact, 15m pullback']
+    },
+    ja: {
+      brandSub:'トレード日誌', settingsBtn:'設定', seedNow:'現在のシード', livesAria:'失った残機 {n}/3',
+      eyebrow:'第{n}契約 · ゲツオクとの契約書', brokenCount:' · 破棄 {n}回', h1:'ルールはひとつ。',
+      clause:'1回のトレードで{th}以上の損失は出さない。',
+      whisper1:'今回のトレード人生、お前に与えられる残機は3つ..', whisper2:'チャンスは3回だけ.. 残機を全部失ったら未練なく去る覚悟で挑んでほしい..',
+      seedLabel:'開始シード', seedNote:'現在のシード {v} · 入出金があればここで修正してください。',
+      ruleLabel:'損切りルール', ruleNote:'変更は新しいエントリーから適用されます。保有中のポジションはエントリー時のルールのままです。',
+      riskLabel:'1回のリスク', riskNote:'エントリー価格と損切り価格を入れると、このリスクに合わせて数量を計算します。',
+      sign:'ルールを確認し、守ります', enterResume:'日誌を開く', enterNew:'署名して日誌を開く',
+      storeNote:'記録はこのブラウザにだけ保存されます。設定のバックアップで保管してください。', demoLink:'サンプルを見る',
+      noStore:'このブラウザでは保存できません。ページを閉じると記録が消えるので、必ずバックアップしてください。', tSeedReq:'開始シードを入力してください',
+      demoChip:'サンプル', demoBanner:'サンプルデータを表示中です。ここでの記録は保存されません。', demoExit:'自分の日誌に戻る',
+      newTrade:'新規トレード', date:'日時', symbol:'銘柄', entry:'エントリー価格', stop:'損切り価格', lev:'レバレッジ (任意)', levPh:'清算リスク確認用',
+      snap:'エントリーのスナップショットリンク', snapHow:'スナップショットリンクの取り方', note:'メモ', notePh:'エントリー根拠、そのときの感情など',
+      hintDefault:'損切りがエントリーより下ならロング、上ならショート', hintLong:'損切りがエントリーより下なのでロングです', hintShort:'損切りがエントリーより上なのでショートです',
+      recLong:'ロングを記録', recShort:'ショートを記録',
+      cRisk:'リスク', cDist:'損切り幅', cQty:'数量', cNotional:'ポジション規模', cMaxLev:'この損切りで安全なレバレッジ', cMaxLevV:'約{n}x以下',
+      cFee:'手数料 (片道)', cFeeV:'{r}% · 損切り時 約{v}', cFeeEdit:'変更', cMargin:'必要証拠金', cLiq:'想定清算価格 (概算)', aLiqFirst:'損切りより先に清算されます。レバレッジを{n}x以下に下げてください。',
+      aMargin:'必要証拠金が現在のシードを超えています。', cQtyEmpty:'エントリーと損切りを入力', aSeedZero:'シードが0以下のため新規トレードを計算できません。',
+      tLong:'ロングを記録しました', tShort:'ショートを記録しました',
+      sSeed:'現在のシード', sRet:'契約リターン', sTrades:'トレード数', sTradesV:'{n}件', sWin:'勝率', sAvgR:'平均R', sparkAria:'シード推移', sparkEmpty:'決済が増えるとシード推移が表示されます',
+      openTitle:'保有中 ({n})', openEmpty:'保有中のポジションはありません。エントリーと損切りを入れて記録してください。',
+      exitAt:'決済', warnViolation:'損切りルール{th}%を超える損失です。記録すると残機が1つ減ります。', feeNote:'手数料{v}込み。記録後は修正できません。',
+      recordIt:'この内容で記録', reenter:'入力し直す', delAsk:'このエントリーを削除しますか？実際にエントリーしていない場合だけ削除してください。', del:'削除', no:'いいえ',
+      exitPh:'決済価格', closeBtn:'決済を記録', cancelEntry:'エントリー取消', tExitReq:'決済価格を入力してください', tDel:'エントリーを削除しました', tClosed:'決済を記録しました',
+      histTitle:'トレード履歴', histEmpty:'まだ決済したトレードはありません。保有中のポジションを決済するとここに移ります。', chipViolation:'違反', stopWord:'損切り',
+      kSeedAtEntry:'エントリー時のシード', kFee:'手数料', snapEntry:'エントリー', snapExit:'決済', snapNone:'{l}スナップショットなし', snapLabel:'{l}スナップショット', snapAlt:'{l}チャートのスナップショット',
+      exitSnap:'決済スナップショットリンク', review:'振り返り', reviewPh:'ルール通りだった？次は何を変える？',
+      histNote:'決済記録は修正できません。違反も同じです。振り返りと決済スナップショットは後から追加できます。',
+      vLifeTitle:'残機 −1', vLifeLine:'{p} · 損切りルール{th}%超過 · 残機あと{n}', vWhisper:'約束したでしょ、セイサン。', vBtn:'もう二度とやらない',
+      vBrokenTitle:'契約破棄', vBrokenText:'残機を3つとも失った。約束どおりなら、この市場を去るべきだ。',
+      sumDays:'期間', sumDaysV:'{n}日', sumStart:'開始シード', sumEnd:'最終シード',
+      vBrokenNote:'記録は残ります。再契約すると残機3つからやり直しです。', vCarry:' 保有中のポジション{n}件は新しい契約に引き継がれます。', vRenew:'それでも再契約する',
+      setTitle:'設定 · バックアップ', close:'閉じる', setLang:'言語', setTrade:'トレード設定', setRisk:'1回のリスク', setFee:'手数料 (片道)',
+      setNote:'リスクは損切りにかかったとき失う現在シードの割合です。手数料はエントリーと決済の両方にかかり、損益と違反判定に含まれます。初期値0.05%はOKXの成行(テイカー)基準なので、指値で約定すると取引所の損益と数セントずれることがあります。損切りルールと開始シードは契約書画面で変更できます。',
+      g1:'TradingViewのチャート右上のカメラアイコンを押す', g2:'「リンクをコピー」を押す', g3:'日誌のスナップショット欄に貼り付ける',
+      gNote:'画像ではなくリンクだけを保存するので記録が軽くなります。リンクが有効な間はプレビューが表示されます。',
+      setBackup:'バックアップ', bNote:'記録はこのブラウザにだけ保存されます。キャッシュ削除や端末変更で消えるので、こまめにバックアップしてください。',
+      bFile:'ファイルに保存', bCopy:'バックアップをコピー', bImportFile:'バックアップファイルを読み込む', bImportText:'またはバックアップを貼り付け', bImportBtn:'貼り付けた内容を読み込む',
+      setReset:'初期化', resetBtn:'すべての記録を削除', resetConfirm:'契約・トレード・残機の記録がすべて消え、元に戻せません。', resetYes:'すべて削除', cancel:'キャンセル',
+      importConfirm:'契約{c}件、トレード{t}件を読み込みます。現在の記録は上書きされます。', importYes:'読み込む',
+      importBad:'バックアップ形式ではありません。「バックアップをコピー」の内容か保存した.jsonファイルを使ってください。',
+      tCopied:'バックアップをコピーしました。メモアプリなどに貼って保管してください', tFileStart:'ファイルを保存しています。ダウンロードされない場合は「バックアップをコピー」を使ってください',
+      tFileBlocked:'ファイル保存がブロックされています。「バックアップをコピー」を使ってください', tImported:'バックアップを読み込みました', tReset:'すべての記録を削除しました',
+      tCopyBlocked:'コピーがブロックされています。下の欄の内容を直接コピーしてください', coin:'コイン',
+      demoNotes:['4hサポートのリテスト後、1hの陽線を確認','レジスタンスで反落ショート。損切りどおり撤退','損切りを入れたのに消した。反発すると思った','押し目エントリー、2Rで利確','損切りを消した瞬間に終わってた。次は損切り注文を先に入れてからエントリー。','1hの上昇配列維持、15mの押し目']
+    }
+  };
+  function pickLang(){
+    try { var s = localStorage.getItem(LANG_KEY); if (I18N[s]) return s; } catch (e) {}
+    var nav = String((navigator.languages && navigator.languages[0]) || navigator.language || '').toLowerCase();
+    if (nav.indexOf('ko') === 0) return 'ko';
+    if (nav.indexOf('ja') === 0) return 'ja';
+    return 'en';
+  }
+  var lang = pickLang();
+  function T(key, vars){
+    var s = (I18N[lang] && I18N[lang][key] != null) ? I18N[lang][key] : I18N.ko[key];
+    if (vars && typeof s === 'string') s = s.replace(/\{(\w+)\}/g, function(m, k){ return vars[k] != null ? vars[k] : m; });
+    return s;
+  }
+  function applyStatic(){
+    document.documentElement.lang = lang;
+    document.querySelectorAll('[data-i18n]').forEach(function(el){ el.textContent = T(el.getAttribute('data-i18n')); });
+    document.querySelectorAll('[data-i18n-ph]').forEach(function(el){ el.setAttribute('placeholder', T(el.getAttribute('data-i18n-ph'))); });
+    document.querySelectorAll('[data-i18n-aria]').forEach(function(el){ el.setAttribute('aria-label', T(el.getAttribute('data-i18n-aria'))); });
+    document.querySelectorAll('[data-lang]').forEach(function(b){ b.setAttribute('aria-pressed', b.getAttribute('data-lang') === lang ? 'true' : 'false'); });
+  }
+  function setLang(l){
+    if (!I18N[l]) return;
+    lang = l;
+    try { localStorage.setItem(LANG_KEY, l); } catch (e) {}
+    if (demo) demo.trades.forEach(function(t){
+      if (t.nk != null) t.note = T('demoNotes')[t.nk];
+      if (t.rk != null) t.review = T('demoNotes')[t.rk];
+    });
+    applyStatic();
+    renderReset();
+    if (!$('gate').hidden) renderGate(); else renderJournal();
+  }
+
+  function blank(){ return { v:1, settings:{ riskPct:1, feePct:0.05 }, contracts:[], trades:[], nextId:1 }; }
+  function valid(d){ return d && typeof d === 'object' && Array.isArray(d.contracts) && Array.isArray(d.trades) && d.settings; }
+  function load(){
+    try {
+      var raw = localStorage.getItem(KEY);
+      if (raw) { var d = JSON.parse(raw); if (valid(d)) return d; }
+    } catch (e) { canPersist = false; }
+    return blank();
+  }
+  var store = load();
+  function S(){ return demo || store; }
+  function save(){
+    if (demo) return;
+    try { localStorage.setItem(KEY, JSON.stringify(store)); canPersist = true; }
+    catch (e) { canPersist = false; }
+  }
+
+  // ---------- helpers ----------
+  var $ = function(id){ return document.getElementById(id); };
+  function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+  function n(v){ var x = parseFloat(v); return isFinite(x) ? x : NaN; }
+  function usd(x, signed){
+    if (!isFinite(x)) return '—';
+    var s = Math.abs(x).toLocaleString('en-US', { minimumFractionDigits:2, maximumFractionDigits:2 });
+    if (signed) return (x > 0 ? '+' : x < 0 ? '−' : '') + '$' + s;
+    return (x < 0 ? '−' : '') + '$' + s;
+  }
+  function pct(x, signed){
+    if (!isFinite(x)) return '—';
+    var s = Math.abs(x).toFixed(2) + '%';
+    return signed ? ((x > 0 ? '+' : x < 0 ? '−' : '') + s) : s;
+  }
+  function price(x){ if (!isFinite(x)) return '—'; return x.toLocaleString('en-US', { maximumFractionDigits: x >= 100 ? 2 : x >= 1 ? 4 : 8 }); }
+  function qty(x){ if (!isFinite(x)) return '—'; return x.toLocaleString('en-US', { maximumFractionDigits: x >= 100 ? 2 : x >= 1 ? 4 : 6 }); }
+  function rr(x){ if (!isFinite(x)) return '—'; return (x > 0 ? '+' : x < 0 ? '−' : '') + Math.abs(x).toFixed(2) + 'R'; }
+  function base(sym){ var b = String(sym || '').toUpperCase().replace(/[-_\/:]?(USDT|USDC|USD|PERP|SWAP).*$/, ''); return b || T('coin'); }
+  function nowLocal(){ var d = new Date(); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16); }
+  function shortDate(s){ if (!s) return ''; var d = new Date(s); if (isNaN(d)) return esc(s); return (d.getMonth()+1) + '/' + d.getDate() + ' ' + String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0'); }
+  function cls(x){ return x > 0 ? 'up' : x < 0 ? 'down' : ''; }
+
+  function snapImage(url){
+    if (!url) return null;
+    var m = String(url).match(/tradingview\.com\/x\/([A-Za-z0-9]+)/);
+    if (m) return 'https://s3.tradingview.com/snapshots/' + m[1].charAt(0).toLowerCase() + '/' + m[1] + '.png';
+    if (/^https?:\/\/.+\.(png|jpe?g|webp|gif)(\?.*)?$/i.test(url)) return url;
+    return null;
+  }
+  function safeUrl(u){ return /^https?:\/\//i.test(u || '') ? u : null; }
+
+  function active(){ var c = S().contracts; for (var i = c.length - 1; i >= 0; i--) if (!c[i].endedAt) return c[i]; return null; }
+  function lastContract(){ var c = S().contracts; return c.length ? c[c.length - 1] : null; }
+  function tradesOf(c){ return S().trades.filter(function(t){ return t.contractId === c.id; }); }
+  function seedOf(c){ return tradesOf(c).reduce(function(a, t){ return a + (t.status === 'closed' ? t.pnl : 0); }, c.startSeed); }
+  function cutsOf(c){ return tradesOf(c).filter(function(t){ return t.violation; }).length; }
+  function brokenCount(){ return S().contracts.filter(function(c){ return c.broken; }).length; }
+
+  function sizing(seed, riskPct, entry, stop, lev){
+    var out = { ok:false };
+    if (!(entry > 0) || !(stop > 0) || entry === stop || !(seed > 0)) return out;
+    out.ok = true;
+    out.dir = stop < entry ? 'long' : 'short';
+    out.entry = entry; out.stop = stop;
+    out.riskAmt = seed * riskPct / 100;
+    out.dist = Math.abs(entry - stop);
+    out.distPct = out.dist / entry * 100;
+    out.qty = out.riskAmt / out.dist;
+    out.notional = out.qty * entry;
+    out.maxLev = Math.floor(1 / (out.distPct / 100 + MMR));
+    if (lev > 0) {
+      out.lev = lev;
+      out.margin = out.notional / lev;
+      out.liq = out.dir === 'long' ? entry * (1 - 1 / lev + MMR) : entry * (1 + 1 / lev - MMR);
+      out.liqFirst = out.dir === 'long' ? out.liq >= stop : out.liq <= stop;
+      out.marginOver = out.margin > seed;
+    }
+    return out;
+  }
+
+  function closeCalc(t, exit, feePct, threshold){
+    var sign = t.dir === 'long' ? 1 : -1;
+    var gross = t.qty * (exit - t.entry) * sign;
+    var fee = (t.entry + exit) * t.qty * feePct / 100;
+    var pnl = gross - fee;
+    return { pnl: pnl, fee: fee, pct: pnl / t.seedAtEntry * 100, r: pnl / t.riskAmt, violation: pnl < 0 && -pnl >= t.seedAtEntry * threshold / 100 };
+  }
+
+  // ---------- 666 marks ----------
+  var GASH = '<svg class="gash" viewBox="0 0 100 140" preserveAspectRatio="none" aria-hidden="true" focusable="false">' +
+    '<path class="gash-cut" d="M80,8 L75,22 L70,27 L66,40 L59,46 L55,59 L49,65 L45,78 L39,84 L35,97 L29,104 L24,117 L16,134 L30,118 L36,112 L44,99 L50,94 L57,81 L63,76 L68,63 L74,58 L77,45 L81,39 L82,24 Z"/>' +
+    '<path class="drip d1" d="M63,77 L63,104"/><circle class="drop d1" cx="63" cy="105" r="3"/>' +
+    '<path class="drip d2" d="M50,95 L50,128"/><circle class="drop d2" cx="50" cy="129" r="3.6"/>' +
+    '<path class="drip d3" d="M36,113 L36,138"/><circle class="drop d3" cx="36" cy="139" r="2.8"/>' +
+    '</svg>';
+  function marksHTML(cuts, big){
+    var h = '<span class="marks' + (big ? ' big' : '') + '" aria-label="' + esc(T('livesAria', { n: cuts })) + '">';
+    for (var i = 0; i < 3; i++) {
+      var c = i < cuts;
+      h += '<span class="six' + (c ? ' cut' : '') + (c && freshCut === i ? ' fresh' : '') + '">6' + (c ? GASH : '') + '</span>';
+    }
+    return h + '</span>';
+  }
+
+  // ---------- top bar ----------
+  function renderTop(){
+    var c = active();
+    var el = $('top-status');
+    if (!c) { el.innerHTML = ''; return; }
+    var seed = seedOf(c);
+    el.innerHTML = '<div class="seed"><small>' + T('seedNow') + '</small><strong class="' + cls(seed - c.startSeed) + '">' + usd(seed) + '</strong></div>' + marksHTML(cutsOf(c), false);
+  }
+
+  // ---------- gate ----------
+  function renderGate(){
+    var c = active();
+    var nth = S().contracts.length + (c ? 0 : 1);
+    var broken = brokenCount();
+    var threshold = c ? c.threshold : 6;
+    var h = '';
+    h += '<div class="eyebrow">' + T('eyebrow', { n: nth }) + (broken ? T('brokenCount', { n: broken }) : '') + '</div>';
+    h += '<h1 id="gate-title">' + T('h1') + '</h1>';
+    h += '<p class="clause">' + T('clause', { th: '<b id="clause-th">' + threshold + '%</b>' }) + '</p>';
+    h += '<p class="whisper">' + T('whisper1') + '<br>' + T('whisper2') + '</p>';
+    h += '<div class="marks-wrap">' + marksHTML(c ? cutsOf(c) : 0, true) + '</div>';
+    h += '<div class="terms">';
+    var last = lastContract();
+    var defSeed = c ? c.startSeed : (last ? Math.max(0, Math.round(seedOf(last))) || 1000 : 1000);
+    h += '<div class="field"><label for="g-seed">' + T('seedLabel') + '</label>' + (c ? '<span class="note">' + T('seedNote', { v: usd(seedOf(c)) }) + '</span>' : '') + '<div class="suffix"><input class="input num" id="g-seed" type="number" inputmode="decimal" min="1" step="any" value="' + defSeed + '"><em>USDT</em></div></div>';
+    h += '<div class="field"><span class="lbl" id="g-th-label">' + T('ruleLabel') + '</span>' + (c ? '<span class="note">' + T('ruleNote') + '</span>' : '') + '<div class="slider-row"><input id="g-th" type="range" min="6" max="10" step="1" value="' + threshold + '" aria-labelledby="g-th-label"><output id="g-th-out" for="g-th">' + threshold + '%</output></div><div class="ticks"><span>6%</span><span>7%</span><span>8%</span><span>9%</span><span>10%</span></div></div>';
+    h += '<div class="field"><label for="g-risk">' + T('riskLabel') + '</label><span class="note">' + T('riskNote') + '</span><div class="suffix"><input class="input num" id="g-risk" type="number" min="0.1" max="5" step="0.1" value="' + S().settings.riskPct + '"><em>%</em></div></div>';
+    h += '</div>';
+    h += '<div class="gate-actions">';
+    h += '<label class="sign"><input type="checkbox" id="g-sign"' + (gateSigned ? ' checked' : '') + '> ' + T('sign') + '</label>';
+    h += '<button class="btn long" type="button" id="g-enter"' + (gateSigned ? '' : ' disabled') + '>' + (c ? T('enterResume') : T('enterNew')) + '</button>';
+    h += '<p class="note" style="margin:0">' + T('storeNote') + ' · <button class="linkbtn" type="button" data-action="demo">' + T('demoLink') + '</button></p>';
+    if (!canPersist) h += '<div class="banner alert">' + T('noStore') + '</div>';
+    h += '</div>';
+    $('contract').innerHTML = h;
+  }
+
+  function enterJournal(){
+    var c = active();
+    var seed = n($('g-seed').value), th = parseInt($('g-th').value, 10), risk = n($('g-risk').value);
+    if (!(seed > 0)) { toast(T('tSeedReq')); $('g-seed').focus(); return; }
+    if (risk > 0) S().settings.riskPct = Math.min(5, risk);
+    if (c) {
+      c.startSeed = seed; c.threshold = th;
+      save();
+    } else {
+      var prev = lastContract();
+      var newId = S().nextId++;
+      S().contracts.push({ id: newId, startSeed: seed, threshold: th, startedAt: new Date().toISOString(), endedAt: null, broken: false });
+      if (prev) S().trades.forEach(function(t){ if (t.status === 'open' && t.contractId === prev.id) t.contractId = newId; });
+      save();
+    }
+    gateSigned = false;
+    show('journal');
+  }
+
+  // ---------- journal ----------
+  function renderBanners(){
+    var h = '';
+    if (demo) h += '<div class="banner"><span class="chip demo">' + T('demoChip') + '</span><span>' + T('demoBanner') + '</span><button class="linkbtn" type="button" data-action="exit-demo">' + T('demoExit') + '</button></div>';
+    if (!canPersist && !demo) h += '<div class="banner alert">' + T('noStore') + '</div>';
+    $('journal-banners').innerHTML = h;
+  }
+
+  function renderStats(){
+    var c = active(); if (!c) return;
+    var closed = tradesOf(c).filter(function(t){ return t.status === 'closed'; });
+    var seed = seedOf(c);
+    var wins = closed.filter(function(t){ return t.pnl > 0; }).length;
+    var avgR = closed.length ? closed.reduce(function(a, t){ return a + t.r; }, 0) / closed.length : NaN;
+    var ret = (seed - c.startSeed) / c.startSeed * 100;
+    var h = '';
+    h += stat(T('sSeed'), usd(seed), cls(seed - c.startSeed));
+    h += stat(T('sRet'), pct(ret, true), cls(ret));
+    h += stat(T('sTrades'), T('sTradesV', { n: closed.length }), '');
+    h += stat(T('sWin'), closed.length ? Math.round(wins / closed.length * 100) + '%' : '—', '');
+    h += stat(T('sAvgR'), rr(avgR), cls(avgR));
+    h += '<div class="spark" aria-label="' + esc(T('sparkAria')) + '">' + spark(c, closed) + '</div>';
+    $('stats').innerHTML = h;
+  }
+  function stat(label, val, k){ return '<div class="stat"><small>' + label + '</small><strong class="' + k + '">' + val + '</strong></div>'; }
+  function spark(c, closed){
+    var pts = [c.startSeed], run = c.startSeed;
+    closed.slice().sort(function(a, b){ return (a.closedAt || '').localeCompare(b.closedAt || ''); }).forEach(function(t){ run += t.pnl; pts.push(run); });
+    var W = 200, H = 48, pad = 4;
+    if (pts.length < 2) return '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none"><line x1="0" y1="' + H/2 + '" x2="' + W + '" y2="' + H/2 + '" stroke="var(--line-2)" stroke-dasharray="3 4"/></svg><small class="note">' + T('sparkEmpty') + '</small>';
+    var min = Math.min.apply(null, pts.concat([c.startSeed])), max = Math.max.apply(null, pts.concat([c.startSeed]));
+    if (max === min) { max += 1; min -= 1; }
+    var x = function(i){ return pad + i * (W - pad * 2) / (pts.length - 1); };
+    var y = function(v){ return pad + (max - v) * (H - pad * 2) / (max - min); };
+    var line = pts.map(function(v, i){ return x(i).toFixed(1) + ',' + y(v).toFixed(1); }).join(' ');
+    var last = pts[pts.length - 1];
+    var col = last >= c.startSeed ? 'var(--long)' : 'var(--short-text)';
+    var area = 'M' + x(0) + ',' + (H - pad) + ' L' + line.split(' ').join(' L') + ' L' + x(pts.length - 1) + ',' + (H - pad) + ' Z';
+    return '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" role="img">' +
+      '<line x1="0" x2="' + W + '" y1="' + y(c.startSeed).toFixed(1) + '" y2="' + y(c.startSeed).toFixed(1) + '" stroke="var(--line-2)" stroke-dasharray="3 4" vector-effect="non-scaling-stroke"/>' +
+      '<path d="' + area + '" fill="' + col + '" fill-opacity=".12"/>' +
+      '<polyline points="' + line + '" fill="none" stroke="' + col + '" stroke-width="1.6" vector-effect="non-scaling-stroke"/>' +
+      '<circle cx="' + x(pts.length - 1).toFixed(1) + '" cy="' + y(last).toFixed(1) + '" r="2.6" fill="' + col + '"/></svg>';
+  }
+
+  function renderCalc(){
+    var c = active(); if (!c) return;
+    var seed = seedOf(c);
+    var s = sizing(seed, S().settings.riskPct, n($('t-entry').value), n($('t-stop').value), n($('t-lev').value));
+    var b = base($('t-symbol').value);
+    var h = '';
+    h += row(T('cRisk'), S().settings.riskPct + '% · ' + usd(seed * S().settings.riskPct / 100));
+    if (s.ok) {
+      h += row(T('cDist'), pct(s.distPct));
+      h += row(T('cQty'), qty(s.qty) + ' ' + esc(b));
+      h += row(T('cNotional'), usd(s.notional));
+      h += row(T('cFee'), (s.ok ? T('cFeeV', { r: S().settings.feePct, v: usd((s.entry + s.stop) * s.qty * S().settings.feePct / 100) }) : S().settings.feePct + '%') + ' <button class="linkbtn" type="button" data-action="guide">' + T('cFeeEdit') + '</button>');
+      h += row(T('cMaxLev'), T('cMaxLevV', { n: s.maxLev }));
+      if (s.lev) {
+        h += row(T('cMargin'), usd(s.margin));
+        h += row(T('cLiq'), price(s.liq));
+        if (s.liqFirst) h += '<span class="alert">' + T('aLiqFirst', { n: s.maxLev }) + '</span>';
+        if (s.marginOver) h += '<span class="alert">' + T('aMargin') + '</span>';
+      }
+    } else {
+      h += row(T('cQty'), T('cQtyEmpty'));
+      h += row(T('cFee'), (s.ok ? T('cFeeV', { r: S().settings.feePct, v: usd((s.entry + s.stop) * s.qty * S().settings.feePct / 100) }) : S().settings.feePct + '%') + ' <button class="linkbtn" type="button" data-action="guide">' + T('cFeeEdit') + '</button>');
+    }
+    if (!(seed > 0)) h += '<span class="alert">' + T('aSeedZero') + '</span>';
+    $('t-calc').innerHTML = h;
+    $('rec-long').disabled = !(s.ok && s.dir === 'long');
+    $('rec-short').disabled = !(s.ok && s.dir === 'short');
+    $('t-hint').textContent = s.ok ? (s.dir === 'long' ? T('hintLong') : T('hintShort')) : T('hintDefault');
+  }
+  function row(k, v){ return '<div><dt>' + k + '</dt><dd>' + v + '</dd></div>'; }
+
+  function recordEntry(dir){
+    var c = active(); if (!c) return;
+    var seed = seedOf(c);
+    var entry = n($('t-entry').value), stop = n($('t-stop').value), lev = n($('t-lev').value);
+    var s = sizing(seed, S().settings.riskPct, entry, stop, lev);
+    if (!s.ok || s.dir !== dir) return;
+    S().trades.push({
+      id: S().nextId++, contractId: c.id,
+      date: $('t-date').value || nowLocal(),
+      symbol: ($('t-symbol').value || 'BTCUSDT').toUpperCase().trim(),
+      dir: dir, entry: entry, stop: stop, lev: lev > 0 ? lev : null,
+      qty: s.qty, riskAmt: s.riskAmt, riskPct: S().settings.riskPct, seedAtEntry: seed, threshold: c.threshold,
+      entrySnap: $('t-snap').value.trim(), note: $('t-note').value.trim(),
+      status: 'open'
+    });
+    save();
+    $('t-entry').value = ''; $('t-stop').value = ''; $('t-snap').value = ''; $('t-note').value = '';
+    $('t-date').value = nowLocal();
+    toast(dir === 'long' ? T('tLong') : T('tShort'));
+    renderJournal();
+  }
+
+  function renderOpen(){
+    var c = active(); if (!c) return;
+    var open = tradesOf(c).filter(function(t){ return t.status === 'open'; });
+    $('open-title').textContent = T('openTitle', { n: open.length });
+    if (!open.length) { $('open-list').innerHTML = '<div class="empty">' + T('openEmpty') + '</div>'; return; }
+    $('open-list').innerHTML = open.slice().reverse().map(function(t){
+      var h = '<div class="pos" data-id="' + t.id + '">';
+      h += '<div class="pos-head"><span class="chip ' + t.dir + '">' + (t.dir === 'long' ? 'LONG' : 'SHORT') + '</span><strong>' + esc(t.symbol) + '</strong>' + (t.lev ? '<span class="muted num">' + t.lev + 'x</span>' : '') + '<time>' + shortDate(t.date) + '</time></div>';
+      h += '<div class="kv"><div><small>' + T('entry') + '</small><span>' + price(t.entry) + '</span></div><div><small>' + T('stop') + '</small><span>' + price(t.stop) + '</span></div><div><small>' + T('cQty') + '</small><span>' + qty(t.qty) + ' ' + esc(base(t.symbol)) + '</span></div><div><small>' + T('cRisk') + '</small><span>' + usd(t.riskAmt) + '</span></div></div>';
+      if (t.note) h += '<div class="note">' + esc(t.note) + '</div>';
+      var pc = pendingClose[t.id];
+      if (pc != null) {
+        var tth = t.threshold || c.threshold;
+        var r = closeCalc(t, pc, S().settings.feePct, tth);
+        h += '<div class="confirm' + (r.violation ? ' bad' : '') + '"><div><span class="num">' + T('exitAt') + ' ' + price(pc) + ' → </span><strong class="num ' + cls(r.pnl) + '">' + usd(r.pnl, true) + ' (' + pct(r.pct, true) + ') · ' + rr(r.r) + '</strong></div>';
+        if (r.violation) h += '<div class="warn">' + T('warnViolation', { th: tth }) + '</div>';
+        h += '<div class="note">' + T('feeNote', { v: usd(r.fee) }) + '</div><div class="btns"><button class="btn small ' + (r.violation ? 'danger' : 'long') + '" type="button" data-action="close-confirm" data-id="' + t.id + '">' + T('recordIt') + '</button><button class="btn small ghost" type="button" data-action="close-cancel" data-id="' + t.id + '">' + T('reenter') + '</button></div></div>';
+      } else if (pendingCancel[t.id]) {
+        h += '<div class="confirm"><div>' + T('delAsk') + '</div><div class="btns"><button class="btn small danger" type="button" data-action="del-confirm" data-id="' + t.id + '">' + T('del') + '</button><button class="btn small ghost" type="button" data-action="del-cancel" data-id="' + t.id + '">' + T('no') + '</button></div></div>';
+      } else {
+        h += '<div class="close-row"><input class="input num" type="number" inputmode="decimal" step="any" min="0" placeholder="' + esc(T('exitPh')) + '" id="exit-' + t.id + '" aria-label="' + esc(T('exitPh')) + '"><button class="btn small ghost" type="button" data-action="close-preview" data-id="' + t.id + '">' + T('closeBtn') + '</button><button class="btn small ghost" type="button" data-action="del-ask" data-id="' + t.id + '">' + T('cancelEntry') + '</button></div>';
+      }
+      return h + '</div>';
+    }).join('');
+  }
+
+  function renderHistory(){
+    var c = active();
+    var list = S().trades.filter(function(t){ return t.status === 'closed' && c && t.contractId === c.id; });
+    list.sort(function(a, b){ return (b.closedAt || '').localeCompare(a.closedAt || ''); });
+    if (!list.length) { $('hist-list').innerHTML = '<div class="empty">' + T('histEmpty') + '</div>'; return; }
+    $('hist-list').innerHTML = list.map(function(t){
+      var h = '<details' + (t.violation ? ' class="cutrow"' : '') + ' data-id="' + t.id + '"><summary>';
+      h += '<div class="h-main"><span class="chip ' + t.dir + '">' + (t.dir === 'long' ? 'L' : 'S') + '</span><strong>' + esc(t.symbol) + '</strong>' + (t.violation ? '<span class="chip cut">' + T('chipViolation') + '</span>' : '') + '<time>' + shortDate(t.date) + '</time></div>';
+      h += '<div class="h-pnl"><strong class="' + cls(t.pnl) + '">' + usd(t.pnl, true) + '</strong><small class="' + cls(t.pnl) + '">' + pct(t.pct, true) + ' · ' + rr(t.r) + '</small></div>';
+      h += '<div class="h-prices">' + price(t.entry) + ' → ' + price(t.exit) + ' · ' + T('stopWord') + ' ' + price(t.stop) + '</div>';
+      h += '</summary><div class="h-body">';
+      h += '<div class="kv"><div><small>' + T('cQty') + '</small><span>' + qty(t.qty) + ' ' + esc(base(t.symbol)) + '</span></div><div><small>' + T('cRisk') + '</small><span>' + usd(t.riskAmt) + ' (' + t.riskPct + '%)</span></div><div><small>' + T('kSeedAtEntry') + '</small><span>' + usd(t.seedAtEntry) + '</span></div><div><small>' + T('kFee') + '</small><span>' + usd(t.fee) + '</span></div></div>';
+      if (t.note) h += '<div><div class="note">' + T('note') + '</div><div>' + esc(t.note) + '</div></div>';
+      h += '<div class="snaps">' + snapBlock(T('snapEntry'), t.entrySnap) + snapBlock(T('snapExit'), t.exitSnap) + '</div>';
+      h += '<div class="field"><label for="xs-' + t.id + '">' + T('exitSnap') + '</label><input class="input" id="xs-' + t.id + '" data-field="exitSnap" data-id="' + t.id + '" type="url" value="' + esc(t.exitSnap || '') + '" placeholder="https://www.tradingview.com/x/…"></div>';
+      h += '<div class="field"><label for="rv-' + t.id + '">' + T('review') + '</label><textarea class="input" id="rv-' + t.id + '" data-field="review" data-id="' + t.id + '" placeholder="' + esc(T('reviewPh')) + '">' + esc(t.review || '') + '</textarea></div>';
+      return h + '</div></details>';
+    }).join('');
+  }
+  function snapBlock(label, url){
+    var u = safeUrl(url);
+    if (!u) return '<div class="snap"><div class="note">' + T('snapNone', { l: label }) + '</div></div>';
+    var img = snapImage(u);
+    return '<div class="snap"><div class="note">' + T('snapLabel', { l: label }) + '</div>' + (img ? '<a href="' + esc(u) + '" target="_blank" rel="noopener"><img src="' + esc(img) + '" alt="' + esc(T('snapAlt', { l: label })) + '" loading="lazy"></a>' : '') + '<a href="' + esc(u) + '" target="_blank" rel="noopener">' + esc(u) + '</a></div>';
+  }
+
+  function renderJournal(){
+    renderTop(); renderBanners(); renderStats(); renderCalc(); renderOpen(); renderHistory();
+  }
+
+  // ---------- closing + verdicts ----------
+  function confirmClose(id){
+    var c = active(); var t = S().trades.find(function(x){ return x.id === id; });
+    var exit = pendingClose[id];
+    if (!c || !t || exit == null) return;
+    var tth = t.threshold || c.threshold;
+    var r = closeCalc(t, exit, S().settings.feePct, tth);
+    t.status = 'closed'; t.exit = exit; t.closedAt = new Date().toISOString();
+    t.pnl = r.pnl; t.fee = r.fee; t.pct = r.pct; t.r = r.r; t.violation = r.violation;
+    t.review = t.review || ''; t.exitSnap = t.exitSnap || '';
+    delete pendingClose[id];
+    if (r.violation) {
+      var cuts = cutsOf(c);
+      freshCut = cuts - 1;
+      queue.push({ kind:'cut', trade:t, cuts:cuts, threshold:tth });
+      if (cuts >= 3) {
+        c.endedAt = new Date().toISOString(); c.broken = true;
+        queue.push({ kind:'broken', contract:c });
+      }
+    }
+    save();
+    renderJournal();
+    toast(T('tClosed'));
+    nextVerdict();
+  }
+
+  function nextVerdict(){
+    var v = queue.shift();
+    if (!v) { $('overlay').hidden = true; freshCut = null; return; }
+    var h = '';
+    if (v.kind === 'cut') {
+      h += marksHTML(v.cuts, true);
+      h += '<h2>' + T('vLifeTitle') + '</h2>';
+      h += '<p class="num">' + T('vLifeLine', { p: pct(v.trade.pct, true), th: v.threshold, n: Math.max(0, 3 - v.cuts) }) + '</p>';
+      h += '<p class="whisper" style="text-align:left">' + T('vWhisper') + '</p>';
+      h += '<button class="btn danger" type="button" data-action="verdict-next" style="width:100%">' + T('vBtn') + '</button>';
+    } else {
+      var c = v.contract, closed = tradesOf(c).filter(function(t){ return t.status === 'closed'; });
+      var end = seedOf(c);
+      var days = Math.max(1, Math.round((new Date(c.endedAt) - new Date(c.startedAt)) / 86400000));
+      var stillOpen = tradesOf(c).filter(function(t){ return t.status === 'open'; }).length;
+      h += '<h2>' + T('vBrokenTitle') + '</h2>';
+      h += '<p>' + T('vBrokenText') + '</p>';
+      h += '<div class="summary"><div><small>' + T('sumDays') + '</small><span>' + T('sumDaysV', { n: days }) + '</span></div><div><small>' + T('sTrades') + '</small><span>' + T('sTradesV', { n: closed.length }) + '</span></div><div><small>' + T('sumStart') + '</small><span>' + usd(c.startSeed) + '</span></div><div><small>' + T('sumEnd') + '</small><span class="' + cls(end - c.startSeed) + '">' + usd(end) + '</span></div></div>';
+      h += '<p class="note">' + T('vBrokenNote') + (stillOpen ? T('vCarry', { n: stillOpen }) : '') + '</p>';
+      h += '<button class="btn long" type="button" data-action="new-contract" style="width:100%">' + T('vRenew') + '</button>';
+    }
+    $('verdict').innerHTML = h;
+    $('overlay').hidden = false;
+    var b = $('verdict').querySelector('button'); if (b) b.focus();
+  }
+
+  // ---------- views ----------
+  function show(view){
+    $('gate').hidden = view !== 'gate';
+    $('journal').hidden = view !== 'journal';
+    if (view === 'gate') { renderTop(); renderGate(); }
+    else { if (!$('t-date').value) $('t-date').value = nowLocal(); renderJournal(); }
+    window.scrollTo(0, 0);
+  }
+
+  function startDemo(){
+    var d = blank();
+    var notes = T('demoNotes');
+    var now = Date.now(), day = 86400000;
+    var iso = function(ms){ var x = new Date(ms); return new Date(x.getTime() - x.getTimezoneOffset() * 60000).toISOString().slice(0, 16); };
+    d.contracts.push({ id:1, startSeed:1000, threshold:6, startedAt:new Date(now - 6 * day).toISOString(), endedAt:null, broken:false });
+    d.nextId = 2;
+    var samples = [
+      { sym:'BTCUSDT', entry:79800, stop:79200, exit:81000, lev:20, ago:5.6, nk:0 },
+      { sym:'ETHUSDT', entry:3050, stop:3110, exit:3110, lev:10, ago:4.8, nk:1 },
+      { sym:'BTCUSDT', entry:80400, stop:80200, exit:78200, lev:30, ago:3.5, nk:2, rk:4 },
+      { sym:'SOLUSDT', entry:182, stop:178, exit:190, lev:10, ago:2.2, nk:3 }
+    ];
+    samples.forEach(function(s){
+      var c = d.contracts[0];
+      var seed = c.startSeed + d.trades.reduce(function(a, t){ return a + t.pnl; }, 0);
+      var z = sizing(seed, 1, s.entry, s.stop, s.lev);
+      var t = { id:d.nextId++, contractId:1, date:iso(now - s.ago * day), symbol:s.sym, dir:z.dir, entry:s.entry, stop:s.stop, lev:s.lev, qty:z.qty, riskAmt:z.riskAmt, riskPct:1, seedAtEntry:seed, threshold:6, entrySnap:'', note:notes[s.nk], nk:s.nk, status:'closed' };
+      var r = closeCalc(t, s.exit, 0.05, 6);
+      t.exit = s.exit; t.closedAt = new Date(now - (s.ago - 0.3) * day).toISOString(); t.pnl = r.pnl; t.fee = r.fee; t.pct = r.pct; t.r = r.r; t.violation = r.violation; t.review = s.rk != null ? notes[s.rk] : ''; if (s.rk != null) t.rk = s.rk; t.exitSnap = '';
+      d.trades.push(t);
+    });
+    var seedNow = 1000 + d.trades.reduce(function(a, t){ return a + t.pnl; }, 0);
+    var z = sizing(seedNow, 1, 80150, 79650, 10);
+    d.trades.push({ id:d.nextId++, contractId:1, date:iso(now - 0.1 * day), symbol:'BTCUSDT', dir:'long', entry:80150, stop:79650, lev:10, qty:z.qty, riskAmt:z.riskAmt, riskPct:1, seedAtEntry:seedNow, threshold:6, entrySnap:'', note:notes[5], nk:5, status:'open' });
+    demo = d;
+    show('journal');
+  }
+
+  // ---------- settings / backup ----------
+  function renderReset(){ $('reset-zone').innerHTML = '<button class="btn ghost small" type="button" data-action="reset-ask">' + T('resetBtn') + '</button>'; }
+  function openSettings(){
+    $('s-risk').value = S().settings.riskPct; $('s-fee').value = S().settings.feePct;
+    $('settings').hidden = false; $('import-confirm').innerHTML = '';
+    renderReset();
+  }
+  function exportText(){ return JSON.stringify(store, null, 1); }
+  var pendingImport = null;
+  function stageImport(text){
+    try {
+      var d = JSON.parse(text);
+      if (!valid(d)) throw new Error('bad');
+      pendingImport = d;
+      $('import-confirm').innerHTML = '<div class="confirm"><div>' + T('importConfirm', { c: d.contracts.length, t: d.trades.length }) + '</div><div class="btns"><button class="btn small long" type="button" data-action="import-confirm">' + T('importYes') + '</button><button class="btn small ghost" type="button" data-action="import-cancel">' + T('cancel') + '</button></div></div>';
+    } catch (e) {
+      pendingImport = null;
+      $('import-confirm').innerHTML = '<div class="banner alert">' + esc(T('importBad')) + '</div>';
+    }
+  }
+
+  var toastTimer;
+  function toast(msg){
+    var t = $('toast'); t.textContent = msg; t.hidden = false;
+    clearTimeout(toastTimer); toastTimer = setTimeout(function(){ t.hidden = true; }, 2200);
+  }
+
+  // ---------- events ----------
+  document.addEventListener('click', function(e){
+    var el = e.target.closest('[data-action], [data-lang], #g-enter, #rec-long, #rec-short, #open-settings');
+    if (!el) return;
+    var id = parseInt(el.getAttribute('data-id'), 10);
+    if (el.hasAttribute('data-lang')) return setLang(el.getAttribute('data-lang'));
+    if (el.id === 'g-enter') return enterJournal();
+    if (el.id === 'rec-long') return recordEntry('long');
+    if (el.id === 'rec-short') return recordEntry('short');
+    if (el.id === 'open-settings') return openSettings();
+    switch (el.getAttribute('data-action')) {
+      case 'demo': return startDemo();
+      case 'exit-demo': demo = null; gateSigned = false; return show('gate');
+      case 'guide': openSettings(); return;
+      case 'close-settings': $('settings').hidden = true; if (!$('journal').hidden) renderJournal(); else renderGate(); return;
+      case 'close-preview':
+        var v = n(($('exit-' + id) || {}).value);
+        if (!(v > 0)) { toast(T('tExitReq')); return; }
+        pendingClose[id] = v; renderOpen(); return;
+      case 'close-cancel': delete pendingClose[id]; renderOpen(); return;
+      case 'close-confirm': return confirmClose(id);
+      case 'del-ask': pendingCancel[id] = true; renderOpen(); return;
+      case 'del-cancel': delete pendingCancel[id]; renderOpen(); return;
+      case 'del-confirm':
+        S().trades = S().trades.filter(function(t){ return !(t.id === id && t.status === 'open'); });
+        delete pendingCancel[id]; save(); renderJournal(); toast(T('tDel')); return;
+      case 'verdict-next': return nextVerdict();
+      case 'new-contract': $('overlay').hidden = true; queue = []; freshCut = null; gateSigned = false; return show('gate');
+      case 'export-copy':
+        var txt = exportText();
+        try {
+          navigator.clipboard.writeText(txt).then(function(){ toast(T('tCopied')); }, function(){ fallbackCopy(txt); });
+        } catch (err) { fallbackCopy(txt); }
+        return;
+      case 'export-file':
+        try {
+          var blob = new Blob([exportText()], { type:'application/json' });
+          var a = document.createElement('a');
+          a.href = URL.createObjectURL(blob);
+          a.download = 'trademon-journal-' + new Date().toISOString().slice(0, 10) + '.json';
+          document.body.appendChild(a); a.click(); a.remove();
+          toast(T('tFileStart'));
+        } catch (err) { toast(T('tFileBlocked')); }
+        return;
+      case 'import-text': return stageImport($('s-import-text').value);
+      case 'import-cancel': pendingImport = null; $('import-confirm').innerHTML = ''; return;
+      case 'import-confirm':
+        if (!pendingImport) return;
+        store = pendingImport; pendingImport = null; demo = null; save();
+        $('import-confirm').innerHTML = ''; $('s-import-text').value = '';
+        $('settings').hidden = true; gateSigned = false; show('gate'); toast(T('tImported')); return;
+      case 'reset-ask':
+        $('reset-zone').innerHTML = '<div class="confirm bad"><div>' + T('resetConfirm') + '</div><div class="btns"><button class="btn small danger" type="button" data-action="reset-confirm">' + T('resetYes') + '</button><button class="btn small ghost" type="button" data-action="reset-cancel">' + T('cancel') + '</button></div></div>';
+        return;
+      case 'reset-cancel': return renderReset();
+      case 'reset-confirm':
+        store = blank(); demo = null; save(); $('settings').hidden = true; gateSigned = false; show('gate'); toast(T('tReset')); return;
+    }
+  });
+  function fallbackCopy(txt){
+    var ta = $('s-import-text'); ta.value = txt; ta.focus(); ta.select();
+    toast(T('tCopyBlocked'));
+  }
+
+  document.addEventListener('input', function(e){
+    var t = e.target;
+    if (t.id === 'g-sign') return;
+    if (t.id === 'g-th') { $('g-th-out').textContent = t.value + '%'; var ct = $('clause-th'); if (ct) ct.textContent = t.value + '%'; return; }
+    if (['t-entry', 't-stop', 't-lev', 't-symbol'].indexOf(t.id) >= 0) return renderCalc();
+    if (t.id === 's-fee') { var f = n(t.value); if (f >= 0 && f <= 1) { S().settings.feePct = f; save(); } return; }
+    if (t.id === 's-risk') { var r = n(t.value); if (r > 0 && r <= 5) { S().settings.riskPct = r; save(); } return; }
+    var fld = t.getAttribute && t.getAttribute('data-field');
+    if (fld) {
+      var tr = S().trades.find(function(x){ return x.id === parseInt(t.getAttribute('data-id'), 10); });
+      if (tr && tr.status === 'closed') { tr[fld] = t.value; save(); }
+    }
+  });
+  document.addEventListener('change', function(e){
+    var t = e.target;
+    if (t.id === 'g-sign') { gateSigned = t.checked; $('g-enter').disabled = !t.checked; return; }
+    if (t.getAttribute && t.getAttribute('data-field') === 'exitSnap') return renderHistory();
+    if (t.id === 's-import-file' && t.files && t.files[0]) {
+      var rd = new FileReader();
+      rd.onload = function(){ stageImport(String(rd.result)); };
+      rd.readAsText(t.files[0]);
+    }
+  });
+  document.addEventListener('keydown', function(e){
+    if (e.key === 'Escape' && !$('settings').hidden) { $('settings').hidden = true; }
+  });
+  $('settings').addEventListener('click', function(e){ if (e.target === $('settings')) $('settings').hidden = true; });
+  document.addEventListener('error', function(e){
+    var t = e.target;
+    if (t && t.tagName === 'IMG' && t.closest('.snap')) { var a = t.parentNode; if (a && a.tagName === 'A') a.remove(); else t.remove(); }
+  }, true);
+  $('ticket').addEventListener('submit', function(e){ e.preventDefault(); });
+
+  applyStatic();
+  renderReset();
+  show('gate');
+})();
+</script>
+
+</body>
+</html>
